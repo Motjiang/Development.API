@@ -26,7 +26,7 @@ namespace Development.API.Controllers
         }
 
         [HttpGet("get-all-articles")]
-        public async Task<IActionResult> GetAllArticles([FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 7, [FromQuery] string searchString = "")
+        public async Task<IActionResult> GetAllArticles(string searchString = "")
         {
             try
             {
@@ -42,14 +42,7 @@ namespace Development.API.Controllers
                         .ToList();
                 }
 
-                var totalCount = allArticles.Count;
-
-                var paginatedArticles = allArticles
-                    .Skip((pageIndex - 1) * pageSize)
-                    .Take(pageSize)
-                    .ToList();
-
-                if (!paginatedArticles.Any())
+                if (!allArticles.Any())
                 {
                     return NotFound(new
                     {
@@ -58,13 +51,7 @@ namespace Development.API.Controllers
                     });
                 }
 
-                return Ok(new
-                {
-                    data = paginatedArticles,
-                    totalCount = totalCount,
-                    pageIndex = pageIndex,
-                    pageSize = pageSize
-                });
+                return Ok(allArticles);
             }
             catch (Exception)
             {

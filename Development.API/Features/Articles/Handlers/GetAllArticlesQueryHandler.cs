@@ -23,15 +23,32 @@ namespace Development.API.Features.Articles.Handlers
 
         public async Task<List<ArticleDto>> Handle(GetAllArticlesQuery request, CancellationToken cancellationToken)
         {
-            var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext.User);
-            bool isAdmin = await _userManager.IsInRoleAsync(user, "Administrator");
+            ApplicationUser? user = null;
+            bool isAdmin = false;
+
+            if (_httpContextAccessor.HttpContext.User.Identity is { IsAuthenticated: true })
+            {
+                user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext.User);
+                if (user != null)
+                {
+                    isAdmin = await _userManager.IsInRoleAsync(user, "Administrator");
+                }
+            }
 
             var query = _context.Articles
                 .Where(a => a.Status != "Deleted");
 
             if (!isAdmin)
             {
-                query = query.Where(a => a.IsVisible && a.AuthorId == user.Id);
+                // If no user is logged in, show only visible public articles
+                if (user == null)
+                {
+                    query = query.Where(a => a.IsVisible);
+                }
+                else
+                {
+                    query = query.Where(a => a.IsVisible && a.AuthorId == user.Id);
+                }
             }
 
             var articles = await query

@@ -21,10 +21,9 @@ namespace Development.API.Controllers
             _mediator = mediator;
             _context = context;
         }
-
-        [Authorize]
+        
         [HttpGet("get-all-categories")]
-        public async Task<IActionResult> GetAllCategories([FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 7, [FromQuery] string searchString = "")
+        public async Task<IActionResult> GetAllCategories(string searchString = "")
         {
             try
             {
@@ -35,14 +34,8 @@ namespace Development.API.Controllers
                     allCategories = allCategories.Where(d => d.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase)).ToList();
                 }
 
-                var totalCount = allCategories.Count();
 
-                var paginatedCategories = allCategories
-                    .Skip((pageIndex - 1) * pageSize)
-                    .Take(pageSize)
-                    .ToList();
-
-                if (!paginatedCategories.Any())
+                if (!allCategories.Any())
                 {
                     return NotFound(new
                     {
@@ -51,13 +44,7 @@ namespace Development.API.Controllers
                     });
                 }
 
-                return Ok(new
-                {
-                    data = paginatedCategories,
-                    totalCount = totalCount,
-                    pageIndex = pageIndex,
-                    pageSize = pageSize
-                });
+                return Ok(allCategories);
             }
             catch (Exception)
             {

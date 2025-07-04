@@ -17,7 +17,7 @@ namespace Development.API.Features.Categories.Handlers
 
         public async Task<IEnumerable<Category>> Handle(GetAllCategoriesQuery request, CancellationToken cancellationToken)
         {
-            return await _context.Categories.Include(c => c.Articles).Where(c => c.Status != "Deleted").ToListAsync(cancellationToken);
+            return await _context.Categories.Where(c => c.Status != "Deleted").ToListAsync(cancellationToken);
         }
     }
 }
