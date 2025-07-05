@@ -25,8 +25,36 @@ namespace Development.API.Controllers
             _context = context;
         }
 
+        [HttpGet("get-all-public-articles")]
+        public async Task<IActionResult> GetAllPublicArticles()
+        {
+            try
+            {
+                var allArticles = await _mediator.Send(new GetPublicArticlesQuery());                
+
+                if (!allArticles.Any())
+                {
+                    return NotFound(new
+                    {
+                        title = "No Articles Found",
+                        message = "There are no matching articles."
+                    });
+                }
+
+                return Ok(allArticles);
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new
+                {
+                    title = "Server Error",
+                    message = "An unexpected error occurred. Please contact support."
+                });
+            }
+        }
+
         [HttpGet("get-all-articles")]
-        public async Task<IActionResult> GetAllArticles(string searchString = "")
+        public async Task<IActionResult> GetAllArticles([FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 5, [FromQuery] string searchString = "")
         {
             try
             {
@@ -42,7 +70,14 @@ namespace Development.API.Controllers
                         .ToList();
                 }
 
-                if (!allArticles.Any())
+                var totalCount = allArticles.Count;
+
+                var pagedArticles = allArticles
+                    .Skip((pageIndex - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToList();
+
+                if (!pagedArticles.Any())
                 {
                     return NotFound(new
                     {
@@ -51,7 +86,13 @@ namespace Development.API.Controllers
                     });
                 }
 
-                return Ok(allArticles);
+                return Ok(new
+                {
+                    data = pagedArticles,
+                    totalCount = totalCount,
+                    pageIndex = pageIndex,
+                    pageSize = pageSize
+                });
             }
             catch (Exception)
             {
@@ -244,6 +285,33 @@ namespace Development.API.Controllers
                     });
                 }
                 return NoContent();
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new
+                {
+                    title = "Server Error",
+                    message = "An unexpected error occurred. Please contact support."
+                });
+            }
+        }
+
+        [Authorize]
+        [HttpPost("category-count")]
+        public async Task<IActionResult> GetArticlesTotal()
+        {
+            try
+            {
+                var approve = await _mediator.Send(new GetArticleCountQuery());
+                if (approve == null)
+                {
+                    return NotFound(new
+                    {
+                        title = "Article Not Found",
+                        message = "The requested article does not exist."
+                    });
+                }
+                return Ok();
             }
             catch (Exception)
             {

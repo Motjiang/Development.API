@@ -21,9 +21,38 @@ namespace Development.API.Controllers
             _mediator = mediator;
             _context = context;
         }
-        
+
+        [HttpGet("get-all-navbar-categories")]
+        public async Task<IActionResult> GetAllNavbarCategories()
+        {
+            try
+            {
+                var allCategories = await _mediator.Send(new GetAllCategoriesQuery());
+
+               
+                if (!allCategories.Any())
+                {
+                    return NotFound(new
+                    {
+                        title = "No Categories Found",
+                        message = "There are no matching categories."
+                    });
+                }
+
+                return Ok(allCategories);
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new
+                {
+                    title = "Server Error",
+                    message = "An unexpected error occurred. Please contact support."
+                });
+            }
+        }
+
         [HttpGet("get-all-categories")]
-        public async Task<IActionResult> GetAllCategories(string searchString = "")
+        public async Task<IActionResult> GetAllCategories([FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 5, [FromQuery] string searchString = "")
         {
             try
             {
@@ -35,7 +64,15 @@ namespace Development.API.Controllers
                 }
 
 
-                if (!allCategories.Any())
+                var totalCount = allCategories.Count();
+
+                var pagedCategoriess = allCategories
+                    .Skip((pageIndex - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToList();
+
+
+                if (!pagedCategoriess.Any())
                 {
                     return NotFound(new
                     {
@@ -44,7 +81,13 @@ namespace Development.API.Controllers
                     });
                 }
 
-                return Ok(allCategories);
+                return Ok(new
+                {
+                    data = pagedCategoriess,
+                    totalCount = totalCount,
+                    pageIndex = pageIndex,
+                    pageSize = pageSize
+                });
             }
             catch (Exception)
             {
@@ -169,7 +212,6 @@ namespace Development.API.Controllers
                 });
             }
         }
-
 
         [Authorize(Roles = "Administrator")]
         [HttpPatch("delete-category/{categoryId}")]
