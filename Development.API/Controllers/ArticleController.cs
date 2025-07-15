@@ -30,7 +30,7 @@ namespace Development.API.Controllers
         {
             try
             {
-                var allArticles = await _mediator.Send(new GetPublicArticlesQuery());                
+                var allArticles = await _mediator.Send(new GetPublicArticlesQuery());
 
                 if (!allArticles.Any())
                 {
@@ -103,7 +103,7 @@ namespace Development.API.Controllers
                 });
             }
         }
-        
+
         [HttpGet("get-article-id/{articleId}")]
         public async Task<IActionResult> GetArticleById(int articleId)
         {
@@ -224,7 +224,7 @@ namespace Development.API.Controllers
         }
 
         [Authorize]
-        [HttpPut("update/{articleId}")]
+        [HttpPut("update-article/{articleId}")]
         public async Task<IActionResult> UpdateArticle(int articleId, [FromBody] UpdateArticleCommand command)
         {
             if (command == null)
@@ -235,6 +235,9 @@ namespace Development.API.Controllers
                     message = "The request body cannot be null."
                 });
             }
+
+            // Inject the articleId from the route into the command
+            var updatedCommand = command with { articleId = articleId };
 
             try
             {
@@ -247,7 +250,7 @@ namespace Development.API.Controllers
                     });
                 }
 
-                var updated = await _mediator.Send(command);
+                var updated = await _mediator.Send(updatedCommand);
                 if (!updated)
                 {
                     return NotFound(new
@@ -270,7 +273,7 @@ namespace Development.API.Controllers
         }
 
         [Authorize]
-        [HttpPatch("delete/{articleId}")]
+        [HttpPatch("delete-article/{articleId}")]
         public async Task<IActionResult> DeleteArticle(int articleId)
         {
             try
@@ -296,14 +299,32 @@ namespace Development.API.Controllers
             }
         }
 
-        [Authorize]
-        [HttpPost("category-count")]
-        public async Task<IActionResult> GetArticlesTotal()
+        [Authorize(Roles = "Administrator")]
+        [HttpGet("get-awaiting-publish")]
+        public async Task<IActionResult> GetAllAwaitingPublish([FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 5, [FromQuery] string searchString = "")
         {
             try
             {
-                var approve = await _mediator.Send(new GetArticleCountQuery());
-                if (approve == null)
+                var allArticles = await _mediator.Send(new GetAwaitingPublishQuery());
+
+                // Search by title or description
+                if (!string.IsNullOrWhiteSpace(searchString))
+                {
+                    allArticles = allArticles
+                        .Where(a =>
+                            a.Title.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+                            a.ShortDescription.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                }
+
+                var totalCount = allArticles.Count;
+
+                var pagedArticles = allArticles
+                    .Skip((pageIndex - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToList();
+
+                if (!pagedArticles.Any())
                 {
                     return NotFound(new
                     {
@@ -311,7 +332,14 @@ namespace Development.API.Controllers
                         message = "The requested article does not exist."
                     });
                 }
-                return Ok();
+
+                return Ok(new
+                {
+                    data = pagedArticles,
+                    totalCount = totalCount,
+                    pageIndex = pageIndex,
+                    pageSize = pageSize
+                });
             }
             catch (Exception)
             {

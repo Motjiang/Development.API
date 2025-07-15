@@ -23,24 +23,24 @@ namespace Development.API.Features.ArticleImages.Handlers
             var file = request.file;
             var fileExtension = Path.GetExtension(file.FileName).ToLower();
 
-            var  articleImage = new ArticleImage
+            var articleImage = new ArticleImage
             {
                 FileName = request.fileName,
                 FileExtension = fileExtension,
                 Title = request.title,
-                Url = request.url,
                 DateCreated = DateTime.Now
             };
 
-            // Save to "Images" folder
-            var localPath = Path.Combine(_webHostEnvironment.ContentRootPath, "Images", $"{articleImage.FileName}{articleImage.FileExtension}");
+            // Save to disk
+            var localPath = Path.Combine(_webHostEnvironment.ContentRootPath, "Images", $"{articleImage.FileName}{fileExtension}");
             using var stream = new FileStream(localPath, FileMode.Create);
             await file.CopyToAsync(stream, cancellationToken);
 
-            // Construct URL
+            // Generate public URL
             var httpRequest = _httpContextAccessor.HttpContext.Request;
-            articleImage.Url = $"{httpRequest.Scheme}://{httpRequest.Host}{httpRequest.PathBase}/Images/{articleImage.FileName}{articleImage.FileExtension}";
+            articleImage.Url = $"{httpRequest.Scheme}://{httpRequest.Host}{httpRequest.PathBase}/Images/{articleImage.FileName}{fileExtension}";
 
+            // Save to DB
             await _context.ArticleImages.AddAsync(articleImage, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
 
